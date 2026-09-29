@@ -153,7 +153,7 @@ postSchema.methods.toPublicJSON = function toPublicJSON(currentUserId) {
     const rawUser = typeof displayUser.toObject === 'function' ? displayUser.toObject() : displayUser;
     displayUser = {
       _id: rawUser._id || rawUser.id,
-      name: isAdmin ? 'Head of Rant Affairs 📢' : (rawUser.name || 'Student'),
+      name: isAdmin ? 'Head of MAKAU-TEA Affairs 📢' : (rawUser.name || 'Student'),
       image: rawUser.image || '',
       department: rawUser.department || '',
       semester: rawUser.semester || '',

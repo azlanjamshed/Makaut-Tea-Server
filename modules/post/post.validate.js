@@ -33,11 +33,11 @@ const updatePostSchema = z.object({
     .optional(),
 });
 
-const ALLOWED_EMOJIS = ['😂', '💀', '😭', '🔥'];
+const ALLOWED_EMOJIS = ['❤️', '💩', '💀'];
 
 const reactPostSchema = z.object({
-  emoji: z.enum(['😂', '💀', '😭', '🔥'], {
-    errorMap: () => ({ message: 'Emoji must be one of: 😂, 💀, 😭, 🔥' }),
+  emoji: z.enum(['❤️', '💩', '💀'], {
+    errorMap: () => ({ message: 'Emoji must be one of: ❤️, 💩, 💀' }),
   }),
 });
 

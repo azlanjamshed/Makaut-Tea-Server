@@ -26,9 +26,16 @@ const userSchema = new mongoose.Schema(
         message: 'Please provide a valid email address',
       },
     },
+    googleId: {
+      type: String,
+      sparse: true,
+      unique: true,
+    },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      required: function () {
+        return !this.googleId;
+      },
       minlength: [6, 'Password must be at least 6 characters'],
       select: false, // never return password by default
     },
@@ -93,9 +100,9 @@ userSchema.index({ anonymousUsername: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });
 
-// Hash password before saving, only if it was modified
+// Hash password before saving, only if it exists and was modified
 userSchema.pre('save', async function hashPassword(next) {
-  if (!this.isModified('password')) return next();
+  if (!this.password || !this.isModified('password')) return next();
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();

@@ -58,9 +58,44 @@ const changePassword = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+// @desc    Authenticate or register with Google OAuth
+// @route   POST /api/auth/google
+// @access  Public
+const googleLogin = asyncHandler(async (req, res) => {
+  const { credential, clientId, devUser } = req.body;
+  const result = await authService.googleLogin({ credential, clientId, devUser });
+
+  res.json({
+    success: true,
+    data: result.user,
+    token: result.token,
+    needsOnboarding: result.needsOnboarding,
+  });
+});
+
+// @desc    Complete onboarding after Google OAuth
+// @route   PUT /api/auth/onboarding
+// @access  Private
+const completeOnboarding = asyncHandler(async (req, res) => {
+  const { department, semester, bio } = req.body;
+  const user = await authService.completeOnboarding(req.user._id, {
+    department,
+    semester,
+    bio,
+  });
+
+  res.json({
+    success: true,
+    data: user,
+    message: 'Profile completed successfully',
+  });
+});
+
 module.exports = {
   registerUser,
   loginUser,
+  googleLogin,
+  completeOnboarding,
   logoutUser,
   getMe,
   changePassword,

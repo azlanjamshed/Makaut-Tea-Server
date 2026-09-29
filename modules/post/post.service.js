@@ -250,9 +250,10 @@ const reactToPost = async (postId, userId, emoji) => {
     throw error;
   }
 
-  if (!Array.isArray(post.reactions)) {
-    post.reactions = [];
-  }
+  const VALID_REACTION_EMOJIS = ['❤️', '👎', '💀'];
+  post.reactions = (post.reactions || []).filter(
+    (r) => r && r.user && VALID_REACTION_EMOJIS.includes(r.emoji)
+  );
 
   const existingIndex = post.reactions.findIndex(
     (r) => r.user.toString() === userId.toString()
@@ -318,15 +319,18 @@ const removeReaction = async (postId, userId) => {
     throw error;
   }
 
-  if (Array.isArray(post.reactions)) {
-    const existingIndex = post.reactions.findIndex(
-      (r) => r.user.toString() === userId.toString()
-    );
-    if (existingIndex > -1) {
-      post.reactions.splice(existingIndex, 1);
-      await post.save();
-    }
+  const VALID_REACTION_EMOJIS = ['❤️', '👎', '💀'];
+  post.reactions = (post.reactions || []).filter(
+    (r) => r && r.user && VALID_REACTION_EMOJIS.includes(r.emoji)
+  );
+
+  const existingIndex = post.reactions.findIndex(
+    (r) => r.user.toString() === userId.toString()
+  );
+  if (existingIndex > -1) {
+    post.reactions.splice(existingIndex, 1);
   }
+  await post.save();
 
   await post.populate('user', 'name image anonymousUsername department semester role');
   return post.toPublicJSON(userId);

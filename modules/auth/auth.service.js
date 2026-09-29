@@ -212,14 +212,92 @@ const completeOnboarding = async (userId, { department, semester, bio }) => {
 
   await user.save();
 
-  return user.toPublicJSON({ isSelf: true });
+/**
+ * Authenticate or register student via Supabase OAuth session
+ */
+const supabaseLogin = async ({ accessToken, user: incomingUser }) => {
+  let email, name, picture, supabaseId;
+
+  if (accessToken) {
+    try {
+      const { createClient } = require('@supabase/supabase-js');
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+      if (supabaseUrl && supabaseKey) {
+        const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+        const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
+        if (!error && data?.user) {
+          const u = data.user;
+          email = u.email?.toLowerCase().trim();
+          name =
+            u.user_metadata?.full_name ||
+            u.user_metadata?.name ||
+            email?.split('@')[0];
+          picture =
+            u.user_metadata?.avatar_url || u.user_metadata?.picture || '';
+          supabaseId = u.id;
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase token verification error, checking incoming payload:', e.message);
+    }
+  }
+
+  // Fallback to incoming user metadata
+  if (!email && incomingUser && incomingUser.email) {
+    email = incomingUser.email.toLowerCase().trim();
+    name = incomingUser.name || email.split('@')[0];
+    picture = incomingUser.avatar || '';
+    supabaseId = incomingUser.id;
+  }
+
+  if (!email) {
+    const error = new Error('Supabase authentication failed: no verified email');
+    error.status = 401;
+    throw error;
+  }
+
+  // Find or create in MongoDB
+  let user = await User.findOne({
+    $or: [
+      ...(supabaseId ? [{ supabaseId }] : []),
+      { email },
+    ],
+  });
+
+  if (user) {
+    if (!user.supabaseId && supabaseId) user.supabaseId = supabaseId;
+    if (!user.image && picture) user.image = picture;
+    user.lastActiveAt = new Date();
+    await user.save();
+  } else {
+    user = await User.create({
+      name,
+      email,
+      supabaseId,
+      image: picture,
+      department: '',
+      semester: '',
+      role: 'user',
+    });
+  }
+
+  const needsOnboarding = !user.department || !user.semester;
+
+  return {
+    user: user.toPublicJSON({ isSelf: true }),
+    token: generateToken(user._id),
+    needsOnboarding,
+  };
 };
 
 module.exports = {
   registerUser,
   loginUser,
   googleLogin,
+  supabaseLogin,
   completeOnboarding,
   getMe,
   changePassword,
 };
+

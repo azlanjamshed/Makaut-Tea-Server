@@ -31,10 +31,15 @@ const userSchema = new mongoose.Schema(
       sparse: true,
       unique: true,
     },
+    supabaseId: {
+      type: String,
+      sparse: true,
+      unique: true,
+    },
     password: {
       type: String,
       required: function () {
-        return !this.googleId;
+        return !this.googleId && !this.supabaseId;
       },
       minlength: [6, 'Password must be at least 6 characters'],
       select: false, // never return password by default

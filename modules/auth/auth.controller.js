@@ -91,10 +91,26 @@ const completeOnboarding = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Authenticate or register with Supabase Google OAuth
+// @route   POST /api/auth/supabase
+// @access  Public
+const supabaseLogin = asyncHandler(async (req, res) => {
+  const { accessToken, user } = req.body;
+  const result = await authService.supabaseLogin({ accessToken, user });
+
+  res.json({
+    success: true,
+    data: result.user,
+    token: result.token,
+    needsOnboarding: result.needsOnboarding,
+  });
+});
+
 module.exports = {
   registerUser,
   loginUser,
   googleLogin,
+  supabaseLogin,
   completeOnboarding,
   logoutUser,
   getMe,

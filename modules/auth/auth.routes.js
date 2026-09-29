@@ -3,6 +3,7 @@ const {
   registerUser,
   loginUser,
   googleLogin,
+  supabaseLogin,
   completeOnboarding,
   logoutUser,
   getMe,
@@ -17,6 +18,7 @@ const router = express.Router();
 router.post('/register', upload.single('image'), validateRegister, registerUser);
 router.post('/login', validateLogin, loginUser);
 router.post('/google', googleLogin);
+router.post('/supabase', supabaseLogin);
 router.put('/onboarding', protect, completeOnboarding);
 router.post('/logout', logoutUser);
 router.get('/me', protect, getMe);

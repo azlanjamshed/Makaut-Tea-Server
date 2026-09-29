@@ -99,7 +99,7 @@ const getAdminPosts = async (
 
   const formattedPosts = posts.map((post) => {
     const raw = typeof post.toObject === 'function' ? post.toObject() : post;
-    const counts = { '❤️': 0, '💩': 0, '💀': 0 };
+    const counts = { '❤️': 0, '👎': 0, '💀': 0 };
     let userReaction = null;
     const reactionsList = Array.isArray(raw.reactions) ? raw.reactions : [];
     for (const r of reactionsList) {
@@ -146,7 +146,7 @@ const getAdminPostById = async (postId, currentUserId) => {
   }
 
   const raw = typeof post.toObject === 'function' ? post.toObject() : post;
-  const counts = { '❤️': 0, '💩': 0, '💀': 0 };
+  const counts = { '❤️': 0, '👎': 0, '💀': 0 };
   let userReaction = null;
   const reactionsList = Array.isArray(raw.reactions) ? raw.reactions : [];
   for (const r of reactionsList) {

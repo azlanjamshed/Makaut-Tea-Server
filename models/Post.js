@@ -10,7 +10,7 @@ const reactionSchema = new mongoose.Schema(
     emoji: {
       type: String,
       required: [true, 'Reaction emoji is required'],
-      enum: ['❤️', '💩', '💀'],
+      enum: ['❤️', '👎', '💀'],
     },
     createdAt: {
       type: Date,
@@ -161,7 +161,7 @@ postSchema.methods.toPublicJSON = function toPublicJSON(currentUserId) {
     };
   }
 
-  const counts = { '❤️': 0, '💩': 0, '💀': 0 };
+  const counts = { '❤️': 0, '👎': 0, '💀': 0 };
   let userReaction = null;
   const reactionsList = Array.isArray(this.reactions) ? this.reactions : [];
 

@@ -28,11 +28,15 @@ app.set("trust proxy", true);
 const allowedOrigins = [
   process.env.CLIENT_URL,
   process.env.ADMIN_URL,
-  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : []),
+  ...(process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",")
+    : []),
   "http://localhost:5173", // User frontend default port
   "http://localhost:5174", // Admin frontend default port
   "http://localhost:3000",
-].filter(Boolean).map((o) => o.trim().replace(/\/+$/, ""));
+]
+  .filter(Boolean)
+  .map((o) => o.trim().replace(/\/+$/, ""));
 
 app.use(
   cors({
@@ -52,7 +56,12 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+    ],
   }),
 );
 app.use(express.json());
@@ -61,8 +70,8 @@ app.use(express.urlencoded({ extended: true }));
 // Serve uploaded images statically, e.g. GET /uploads/169999-abc.png
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-app.get("/api/health", (req, res) => {
-  res.json({ success: true, message: "Rant website API is running" });
+app.get(["/health", "/api/health"], (req, res) => {
+  res.status(200).json({ status: "OK", message: "Rant website API is running", timestamp: new Date() });
 });
 
 app.use("/api/auth", authRoutes);
@@ -74,6 +83,7 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/announcement-requests", announcementRoutes);
 app.use("/api/feedback", feedbackRoutes);
+
 
 app.use(notFound);
 app.use(errorHandler);

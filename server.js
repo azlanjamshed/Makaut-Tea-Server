@@ -67,8 +67,15 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded images statically, e.g. GET /uploads/169999-abc.png
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Serve uploaded images statically with browser caching (7 days)
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"), {
+    maxAge: "7d",
+    etag: true,
+    lastModified: true,
+  }),
+);
 
 app.get(["/health", "/api/health"], (req, res) => {
   res.status(200).json({ status: "OK", message: "Rant website API is running", timestamp: new Date() });

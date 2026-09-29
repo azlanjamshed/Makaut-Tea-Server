@@ -212,6 +212,9 @@ const completeOnboarding = async (userId, { department, semester, bio }) => {
 
   await user.save();
 
+  return user.toPublicJSON({ isSelf: true });
+};
+
 /**
  * Authenticate or register student via Supabase OAuth session
  */

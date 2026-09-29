@@ -109,7 +109,10 @@ const googleLogin = async ({ credential, clientId, devUser }) => {
     picture = devUser.picture || '';
   } else if (credential) {
     // 2. Official Google ID Token Verification
-    const activeClientId = process.env.GOOGLE_CLIENT_ID || clientId;
+    const DEFAULT_GOOGLE_CLIENT_ID =
+      '113387745578-39rrp3vibarq7e6m589knqnqp8vcipgq.apps.googleusercontent.com';
+    const activeClientId =
+      process.env.GOOGLE_CLIENT_ID || clientId || DEFAULT_GOOGLE_CLIENT_ID;
     let payload;
     try {
       const client = new OAuth2Client(activeClientId);

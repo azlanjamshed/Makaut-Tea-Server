@@ -130,6 +130,7 @@ const getAdminPosts = async (
       limit: validLimit,
       total,
       pages: Math.ceil(total / validLimit),
+      totalPages: Math.ceil(total / validLimit),
     },
   };
 };
@@ -293,6 +294,7 @@ const getReports = async ({
       limit: validLimit,
       total,
       pages: Math.ceil(total / validLimit),
+      totalPages: Math.ceil(total / validLimit),
     },
   };
 };
@@ -504,6 +506,7 @@ const getUsers = async ({
       limit: validLimit,
       total,
       pages: Math.ceil(total / validLimit),
+      totalPages: Math.ceil(total / validLimit),
     },
   };
 };

@@ -56,7 +56,7 @@ const addComment = async ({ postId, userId, text, isAnonymous, department, semes
  * Get paginated comments for a post
  */
 const getCommentsByPost = async (postId, { page = 1, limit = 20, sort = 'desc', currentUserId } = {}) => {
-  const post = await Post.findById(postId);
+  const post = await Post.findById(postId).select('_id');
   if (!post) {
     const error = new Error('Post not found');
     error.status = 404;
@@ -126,7 +126,7 @@ const deleteComment = async (commentId, userId, userRole) => {
     throw error;
   }
 
-  const post = await Post.findById(comment.post);
+  const post = await Post.findById(comment.post).select('user commentsCount');
   const isCommentAuthor = comment.user.toString() === userId.toString();
   const isPostAuthor = post && post.user.toString() === userId.toString();
   const isAdmin = userRole === 'admin';

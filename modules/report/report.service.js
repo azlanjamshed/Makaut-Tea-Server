@@ -13,7 +13,7 @@ const createReport = async ({ reporterId, targetType, targetId, reason, descript
   let userRef = null;
 
   if (targetType === 'post') {
-    const post = await Post.findById(targetId);
+    const post = await Post.findById(targetId).select('_id');
     if (!post) {
       const error = new Error('Post not found');
       error.status = 404;
@@ -21,7 +21,7 @@ const createReport = async ({ reporterId, targetType, targetId, reason, descript
     }
     postRef = post._id;
   } else if (targetType === 'comment') {
-    const comment = await Comment.findById(targetId);
+    const comment = await Comment.findById(targetId).select('_id');
     if (!comment) {
       const error = new Error('Comment not found');
       error.status = 404;
@@ -29,7 +29,7 @@ const createReport = async ({ reporterId, targetType, targetId, reason, descript
     }
     commentRef = comment._id;
   } else if (targetType === 'user') {
-    const user = await User.findById(targetId);
+    const user = await User.findById(targetId).select('_id');
     if (!user) {
       const error = new Error('User not found');
       error.status = 404;

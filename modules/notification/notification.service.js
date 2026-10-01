@@ -195,6 +195,11 @@ const deleteNotification = async (notificationId, userId) => {
  * Clear all notifications for a user
  */
 const clearAllNotifications = async (userId) => {
+  if (!userId) {
+    const error = new Error('User ID is required to clear notifications');
+    error.status = 400;
+    throw error;
+  }
   const result = await Notification.deleteMany({ recipient: userId });
   return {
     success: true,

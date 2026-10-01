@@ -1,6 +1,7 @@
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
+const compression = require("compression");
 const dotenv = require("dotenv");
 
 dotenv.config();
@@ -23,6 +24,7 @@ connectDB();
 const app = express();
 
 app.set("trust proxy", true);
+app.use(compression());
 
 // Allow CORS for user and admin frontends (configurable via CLIENT_URL, ADMIN_URL, or ALLOWED_ORIGINS)
 const allowedOrigins = [
@@ -78,7 +80,15 @@ app.use(
 );
 
 app.get(["/health", "/api/health"], (req, res) => {
-  res.status(200).json({ status: "OK", message: "Rant website API is running", timestamp: new Date() });
+ 
+
+  res
+    .status(200)
+    .json({
+      status: "OK",
+      message: "Rant website API is running",
+      timestamp: new Date(),
+    });
 });
 
 app.use("/api/auth", authRoutes);
@@ -90,7 +100,6 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/announcement-requests", announcementRoutes);
 app.use("/api/feedback", feedbackRoutes);
-
 
 app.use(notFound);
 app.use(errorHandler);

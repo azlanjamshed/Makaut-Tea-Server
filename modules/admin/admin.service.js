@@ -303,8 +303,8 @@ const getReportById = async (reportId) => {
   const report = await Report.findById(reportId)
     .populate('reporter', 'name email anonymousUsername')
     .populate('reviewedBy', 'name email')
-    .populate('post')
-    .populate('comment')
+    .populate('post', 'text department isAnonymous isHidden isDeleted image user')
+    .populate('comment', 'text user')
     .populate('reportedUser', 'name email status role');
 
   if (!report) {

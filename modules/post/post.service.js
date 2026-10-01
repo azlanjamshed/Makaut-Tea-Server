@@ -2,6 +2,7 @@ const Post = require('../../models/Post');
 const User = require('../../models/User');
 const Comment = require('../../models/Comment');
 const { uploadImage } = require('../../utils/imagekit');
+const { ALLOWED_REACTIONS } = require('../../utils/constants');
 const { createNotification, checkAndNotifyTrending } = require('../notification/notification.service');
 
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -29,14 +30,14 @@ const createPost = async ({ userId, text, department, semester, isAnonymous, isO
  */
 const getPosts = async ({
   page = 1,
-  limit = 20,
+  limit = 10,
   department,
   username,
   q,
   currentUserId,
 } = {}) => {
   const validPage = Math.max(parseInt(page, 10) || 1, 1);
-  const validLimit = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
+  const validLimit = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
   const skip = (validPage - 1) * validLimit;
 
   const query = {
@@ -88,6 +89,7 @@ const getPosts = async ({
           limit: validLimit,
           total: 0,
           pages: 0,
+          hasMore: false,
         },
       };
     }
@@ -108,20 +110,25 @@ const getPosts = async ({
 
   const [posts, total] = await Promise.all([
     Post.find(query)
+      .select('-__v -moderationReason -moderatedBy -trendingNotified')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(validLimit)
-      .populate('user', 'name image anonymousUsername department semester role'),
+      .populate('user', 'name image anonymousUsername department semester role')
+      .lean(),
     Post.countDocuments(query),
   ]);
 
+  const totalPages = Math.ceil(total / validLimit) || 0;
+
   return {
-    posts: posts.map((p) => p.toPublicJSON(currentUserId)),
+    posts: posts.map((p) => Post.formatPublicPost(p, currentUserId)),
     pagination: {
       page: validPage,
       limit: validLimit,
       total,
-      pages: Math.ceil(total / validLimit),
+      pages: totalPages,
+      hasMore: validPage < totalPages,
     },
   };
 };
@@ -136,7 +143,7 @@ const searchPosts = async (params) => {
 /**
  * Get posts by department
  */
-const getPostsByDepartment = async (department, { page = 1, limit = 20, currentUserId } = {}) => {
+const getPostsByDepartment = async (department, { page = 1, limit = 10, currentUserId } = {}) => {
   return getPosts({ page, limit, department, currentUserId });
 };
 
@@ -217,10 +224,14 @@ const deletePost = async (postId, userId) => {
 };
 
 /**
- * Get all posts created by a specific user
+ * Get all posts created by a specific user with pagination
  */
-const getPostsByUser = async (userId, currentUserId) => {
+const getPostsByUser = async (userId, currentUserId, { page = 1, limit = 10 } = {}) => {
   const isSelf = currentUserId && String(userId) === String(currentUserId);
+  const validPage = Math.max(parseInt(page, 10) || 1, 1);
+  const validLimit = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
+  const skip = (validPage - 1) * validLimit;
+
   const query = {
     user: userId,
     isHidden: { $ne: true },
@@ -232,10 +243,29 @@ const getPostsByUser = async (userId, currentUserId) => {
     query.isAnonymous = { $ne: true };
   }
 
-  const posts = await Post.find(query)
-    .sort({ createdAt: -1 })
-    .populate('user', 'name image anonymousUsername department semester role');
-  return posts.map((p) => p.toPublicJSON(currentUserId));
+  const [posts, total] = await Promise.all([
+    Post.find(query)
+      .select('-__v -moderationReason -moderatedBy -trendingNotified')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(validLimit)
+      .populate('user', 'name image anonymousUsername department semester role')
+      .lean(),
+    Post.countDocuments(query),
+  ]);
+
+  const totalPages = Math.ceil(total / validLimit) || 0;
+
+  return {
+    posts: posts.map((p) => Post.formatPublicPost(p, currentUserId)),
+    pagination: {
+      page: validPage,
+      limit: validLimit,
+      total,
+      pages: totalPages,
+      hasMore: validPage < totalPages,
+    },
+  };
 };
 
 /**
@@ -250,9 +280,8 @@ const reactToPost = async (postId, userId, emoji) => {
     throw error;
   }
 
-  const VALID_REACTION_EMOJIS = ['❤️', '👎', '💀'];
   post.reactions = (post.reactions || []).filter(
-    (r) => r && r.user && VALID_REACTION_EMOJIS.includes(r.emoji)
+    (r) => r && r.user && ALLOWED_REACTIONS.includes(r.emoji)
   );
 
   const existingIndex = post.reactions.findIndex(
@@ -319,9 +348,8 @@ const removeReaction = async (postId, userId) => {
     throw error;
   }
 
-  const VALID_REACTION_EMOJIS = ['❤️', '👎', '💀'];
   post.reactions = (post.reactions || []).filter(
-    (r) => r && r.user && VALID_REACTION_EMOJIS.includes(r.emoji)
+    (r) => r && r.user && ALLOWED_REACTIONS.includes(r.emoji)
   );
 
   const existingIndex = post.reactions.findIndex(
@@ -399,20 +427,22 @@ const getMyReactedPosts = async (userId, { page = 1, limit = 20 } = {}) => {
 
   const [posts, total] = await Promise.all([
     Post.find(query)
+      .select('-__v -moderationReason -moderatedBy -trendingNotified')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(validLimit)
-      .populate('user', 'name image anonymousUsername department semester role'),
+      .populate('user', 'name image anonymousUsername department semester role')
+      .lean(),
     Post.countDocuments(query),
   ]);
 
   return {
-    posts: posts.map((p) => p.toPublicJSON(userId)),
+    posts: posts.map((p) => Post.formatPublicPost(p, userId)),
     pagination: {
       page: validPage,
       limit: validLimit,
       total,
-      pages: Math.ceil(total / validLimit),
+      pages: Math.ceil(total / validLimit) || 0,
     },
   };
 };
@@ -486,7 +516,7 @@ const getTrendingPosts = async ({
   });
 
   const posts = populatedResults.map((doc) => {
-    return Post.hydrate(doc).toPublicJSON(currentUserId);
+    return Post.formatPublicPost(doc, currentUserId);
   });
 
   return {
@@ -522,11 +552,13 @@ const getRecentOfficialPosts = async ({ hours = 24, limit = 5, currentUserId } =
   };
 
   const posts = await Post.find(query)
+    .select('-__v -moderationReason -moderatedBy -trendingNotified')
     .sort({ createdAt: -1 })
     .limit(validLimit)
-    .populate('user', 'name image anonymousUsername department semester role');
+    .populate('user', 'name image anonymousUsername department semester role')
+    .lean();
 
-  return posts.map((post) => post.toPublicJSON(currentUserId));
+  return posts.map((post) => Post.formatPublicPost(post, currentUserId));
 };
 
 module.exports = {

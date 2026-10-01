@@ -71,6 +71,11 @@ const updateProfile = async (
  * Delete authenticated user's own account, all of their posts, and comments
  */
 const deleteAccount = async (userId) => {
+  if (!userId) {
+    const error = new Error('User ID is required to delete account');
+    error.status = 400;
+    throw error;
+  }
   const userPosts = await Post.find({ user: userId }).select('_id');
   const userPostIds = userPosts.map((p) => p._id);
 

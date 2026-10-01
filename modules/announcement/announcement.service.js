@@ -145,7 +145,7 @@ const getAdminRequestById = async (requestId) => {
   const request = await AnnouncementRequest.findById(requestId)
     .populate('user', 'name email department semester image role')
     .populate('reviewedBy', 'name email')
-    .populate('publishedPost');
+    .populate('publishedPost', 'text department semester image createdAt isOfficial');
 
   if (!request) {
     const error = new Error('Announcement request not found');
@@ -164,7 +164,10 @@ const approveRequest = async (
   adminId,
   { customizedText, department, semester, notes } = {}
 ) => {
-  const request = await AnnouncementRequest.findById(requestId).populate('user');
+  const request = await AnnouncementRequest.findById(requestId).populate(
+    'user',
+    'name email department semester image role'
+  );
   if (!request) {
     const error = new Error('Announcement request not found');
     error.status = 404;
@@ -225,7 +228,10 @@ const approveRequest = async (
  * Admin: Reject request with feedback / reason
  */
 const rejectRequest = async (requestId, adminId, { reason }) => {
-  const request = await AnnouncementRequest.findById(requestId).populate('user');
+  const request = await AnnouncementRequest.findById(requestId).populate(
+    'user',
+    'name email department semester image role'
+  );
   if (!request) {
     const error = new Error('Announcement request not found');
     error.status = 404;

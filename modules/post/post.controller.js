@@ -123,12 +123,19 @@ const deletePost = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
-// @desc    Get all posts by a specific user
-// @route   GET /api/posts/user/:userId
+// @desc    Get all posts by a specific user (paginated)
+// @route   GET /api/posts/user/:userId?page=1&limit=10
 // @access  Public (optional auth)
 const getPostsByUser = asyncHandler(async (req, res) => {
-  const posts = await postService.getPostsByUser(req.params.userId, req.user?._id);
-  res.json({ success: true, data: posts });
+  const result = await postService.getPostsByUser(req.params.userId, req.user?._id, {
+    page: req.query.page,
+    limit: req.query.limit,
+  });
+  res.json({
+    success: true,
+    data: result.posts,
+    pagination: result.pagination,
+  });
 });
 
 // @desc    Add, change, or toggle reaction on a post

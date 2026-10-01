@@ -33,11 +33,13 @@ const updatePostSchema = z.object({
     .optional(),
 });
 
-const ALLOWED_EMOJIS = ['❤️', '👎', '💀'];
+const { ALLOWED_REACTIONS } = require('../../utils/constants');
+
+const ALLOWED_EMOJIS = ALLOWED_REACTIONS;
 
 const reactPostSchema = z.object({
-  emoji: z.enum(['❤️', '👎', '💀'], {
-    errorMap: () => ({ message: 'Emoji must be one of: ❤️, 👎, 💀' }),
+  emoji: z.enum(ALLOWED_REACTIONS, {
+    errorMap: () => ({ message: `Emoji must be one of: ${ALLOWED_REACTIONS.join(', ')}` }),
   }),
 });
 

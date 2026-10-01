@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { ALLOWED_REACTIONS } = require('../utils/constants');
 
 const reactionSchema = new mongoose.Schema(
   {
@@ -10,7 +11,7 @@ const reactionSchema = new mongoose.Schema(
     emoji: {
       type: String,
       required: [true, 'Reaction emoji is required'],
-      enum: ['❤️', '👎', '💀'],
+      enum: ALLOWED_REACTIONS,
     },
     createdAt: {
       type: Date,
@@ -119,22 +120,29 @@ postSchema.virtual('status').get(function () {
   return 'active';
 });
 
-postSchema.index({ createdAt: -1 });
-postSchema.index({ department: 1, createdAt: -1 });
-postSchema.index({ user: 1, isAnonymous: 1, createdAt: -1 });
-postSchema.index({ isHidden: 1, isDeleted: 1 });
-postSchema.index({ isOfficial: 1 });
+// Compound indexes tailored for feed queries and sorting
+postSchema.index({ isDeleted: 1, isHidden: 1, createdAt: -1 });
+postSchema.index({ isDeleted: 1, isHidden: 1, department: 1, createdAt: -1 });
+postSchema.index({ user: 1, isDeleted: 1, isHidden: 1, createdAt: -1 });
+postSchema.index({ 'reactions.user': 1, isDeleted: 1, isHidden: 1, createdAt: -1 });
+postSchema.index({ isOfficial: 1, isDeleted: 1, isHidden: 1, createdAt: -1 });
 
-// Public-safe representation (hides internal viewedBy list; respects anonymous posting; computes reaction counts)
-postSchema.methods.toPublicJSON = function toPublicJSON(currentUserId) {
-  let displayUser = this.user;
+/**
+ * Public-safe representation (hides internal viewedBy list; respects anonymous posting; computes reaction counts).
+ * Works with both plain JavaScript objects (from .lean()) and Mongoose document instances.
+ */
+function formatPublicPost(post, currentUserId) {
+  if (!post) return null;
+  const rawPost = typeof post.toObject === 'function' ? post.toObject() : post;
+
+  let displayUser = rawPost.user;
   const isAdmin = Boolean(
-    this.isOfficial ||
-    (this.user && typeof this.user === 'object' && this.user.role === 'admin')
+    rawPost.isOfficial ||
+    (rawPost.user && typeof rawPost.user === 'object' && rawPost.user.role === 'admin')
   );
 
-  const rawAuthorId = this.user
-    ? (this.user._id ? this.user._id.toString() : this.user.toString())
+  const rawAuthorId = rawPost.user
+    ? (rawPost.user._id ? rawPost.user._id.toString() : rawPost.user.toString())
     : null;
   const isOwner = Boolean(
     currentUserId &&
@@ -142,10 +150,10 @@ postSchema.methods.toPublicJSON = function toPublicJSON(currentUserId) {
     currentUserId.toString() === rawAuthorId
   );
 
-  if (this.isAnonymous && !isAdmin) {
+  if (rawPost.isAnonymous && !isAdmin) {
     displayUser = {
       _id: null,
-      name: (this.user && typeof this.user === 'object' && this.user.anonymousUsername) || 'Anonymous',
+      name: (rawPost.user && typeof rawPost.user === 'object' && rawPost.user.anonymousUsername) || 'Anonymous',
       image: '',
       role: 'user',
     };
@@ -161,16 +169,20 @@ postSchema.methods.toPublicJSON = function toPublicJSON(currentUserId) {
     };
   }
 
-  const counts = { '❤️': 0, '👎': 0, '💀': 0 };
+  const counts = {};
+  for (const emoji of ALLOWED_REACTIONS) {
+    counts[emoji] = 0;
+  }
   let userReaction = null;
-  const reactionsList = Array.isArray(this.reactions) ? this.reactions : [];
+  const reactionsList = Array.isArray(rawPost.reactions) ? rawPost.reactions : [];
 
   for (const r of reactionsList) {
-    if (counts[r.emoji] !== undefined) {
+    if (r && counts[r.emoji] !== undefined) {
       counts[r.emoji] += 1;
     }
     if (
       currentUserId &&
+      r &&
       r.user &&
       (r.user._id ? r.user._id.toString() : r.user.toString()) === currentUserId.toString() &&
       counts[r.emoji] !== undefined
@@ -180,29 +192,35 @@ postSchema.methods.toPublicJSON = function toPublicJSON(currentUserId) {
   }
 
   return {
-    id: this._id,
+    id: rawPost._id || rawPost.id,
     user: displayUser,
-    text: this.text,
-    image: this.image,
-    department: this.department,
-    semester: this.semester,
-    isAnonymous: Boolean(this.isAnonymous && !isAdmin),
+    text: rawPost.text,
+    image: rawPost.image || '',
+    department: rawPost.department || '',
+    semester: rawPost.semester || '',
+    isAnonymous: Boolean(rawPost.isAnonymous && !isAdmin),
     isAdminPost: isAdmin,
     isOfficial: isAdmin,
     isOwner,
-    isHidden: Boolean(this.isHidden),
-    isDeleted: Boolean(this.isDeleted),
-    status: this.isDeleted ? 'deleted' : this.isHidden ? 'hidden' : 'active',
-    views: this.views,
-    commentsCount: this.commentsCount || 0,
+    isHidden: Boolean(rawPost.isHidden),
+    isDeleted: Boolean(rawPost.isDeleted),
+    status: rawPost.isDeleted ? 'deleted' : rawPost.isHidden ? 'hidden' : 'active',
+    views: rawPost.views || 0,
+    commentsCount: rawPost.commentsCount || 0,
     reactions: {
       counts,
       total: reactionsList.length,
       userReaction,
     },
-    createdAt: this.createdAt,
-    updatedAt: this.updatedAt,
+    createdAt: rawPost.createdAt,
+    updatedAt: rawPost.updatedAt,
   };
+}
+
+postSchema.methods.toPublicJSON = function toPublicJSON(currentUserId) {
+  return formatPublicPost(this, currentUserId);
 };
+
+postSchema.statics.formatPublicPost = formatPublicPost;
 
 module.exports = mongoose.model('Post', postSchema);

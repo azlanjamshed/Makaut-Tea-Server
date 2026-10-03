@@ -1,17 +1,19 @@
-const crypto = require('crypto');
-const asyncHandler = require('../../middleware/asyncHandler');
-const postService = require('./post.service');
+const crypto = require("crypto");
+const asyncHandler = require("../../middleware/asyncHandler");
+const postService = require("./post.service");
 
 // Builds a stable, anonymous identifier for a guest viewer so the same
 // browser/IP doesn't inflate the view count on every refresh. Logged-in
 // users are tracked by their real user id instead.
 const getViewerId = (req) => {
   if (req.user) return `u:${req.user._id.toString()}`;
-  const forwarded = req.headers['x-forwarded-for'];
+  const forwarded = req.headers["x-forwarded-for"];
   const rawIp = forwarded
-    ? (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : forwarded[0])
-    : (req.ip || req.socket?.remoteAddress || 'unknown');
-  return `g:${crypto.createHash('sha256').update(String(rawIp)).digest('hex')}`;
+    ? typeof forwarded === "string"
+      ? forwarded.split(",")[0].trim()
+      : forwarded[0]
+    : req.ip || req.socket?.remoteAddress || "unknown";
+  return `g:${crypto.createHash("sha256").update(String(rawIp)).digest("hex")}`;
 };
 
 // @desc    Create a new post (rant)
@@ -19,10 +21,16 @@ const getViewerId = (req) => {
 // @access  Private
 const createPost = asyncHandler(async (req, res) => {
   const { text, isAnonymous } = req.body;
-  const isOfficial = req.user.role === 'admin';
+  const isOfficial = req.user.role === "admin";
   // Department and semester can be explicitly specified (e.g. by admin or user), or fallback to user profile
-  const department = req.body.department !== undefined ? req.body.department : (req.user.department || '');
-  const semester = req.body.semester !== undefined ? req.body.semester : (req.user.semester || '');
+  const department =
+    req.body.department !== undefined
+      ? req.body.department
+      : req.user.department || "";
+  const semester =
+    req.body.semester !== undefined
+      ? req.body.semester
+      : req.user.semester || "";
 
   const post = await postService.createPost({
     userId: req.user._id,
@@ -39,6 +47,7 @@ const createPost = asyncHandler(async (req, res) => {
 // @desc    Get all posts (newest first), paginated, optionally filtered by department, username, or search query
 // @route   GET /api/posts?page=1&limit=20&department=...&username=...
 // @access  Public (optional auth)
+
 const getPosts = asyncHandler(async (req, res) => {
   const result = await postService.getPosts({
     page: req.query.page,
@@ -47,6 +56,7 @@ const getPosts = asyncHandler(async (req, res) => {
     username: req.query.username,
     q: req.query.q,
     currentUserId: req.user?._id,
+    isAdmin: req.user?.role === "admin",
   });
 
   res.json({
@@ -55,7 +65,6 @@ const getPosts = asyncHandler(async (req, res) => {
     pagination: result.pagination,
   });
 });
-
 // @desc    Search posts by department, username, or text query
 // @route   GET /api/posts/search?department=...&username=...&q=...
 // @access  Public (optional auth)
@@ -98,7 +107,11 @@ const getPostsByDepartment = asyncHandler(async (req, res) => {
 // @access  Public (optional auth)
 const getPostById = asyncHandler(async (req, res) => {
   const viewerId = getViewerId(req);
-  const post = await postService.getPostById(req.params.id, viewerId, req.user?._id);
+  const post = await postService.getPostById(
+    req.params.id,
+    viewerId,
+    req.user?._id,
+  );
   res.json({ success: true, data: post });
 });
 
@@ -107,11 +120,15 @@ const getPostById = asyncHandler(async (req, res) => {
 // @access  Private (owner only)
 const updatePost = asyncHandler(async (req, res) => {
   const { text, isAnonymous } = req.body;
-  const updatedPost = await postService.updatePost(req.params.id, req.user._id, {
-    text,
-    isAnonymous,
-    file: req.file,
-  });
+  const updatedPost = await postService.updatePost(
+    req.params.id,
+    req.user._id,
+    {
+      text,
+      isAnonymous,
+      file: req.file,
+    },
+  );
   res.json({ success: true, data: updatedPost });
 });
 
@@ -127,7 +144,7 @@ const deletePost = asyncHandler(async (req, res) => {
 // @route   GET /api/posts/user/:userId?page=1&limit=10
 // @access  Public (optional auth)
 const getPostsByUser = asyncHandler(async (req, res) => {
-  const isAdmin = req.user?.role === 'admin';
+  const isAdmin = req.user?.role === "admin";
   const result = await postService.getPostsByUser(
     req.params.userId,
     req.user?._id,
@@ -135,7 +152,7 @@ const getPostsByUser = asyncHandler(async (req, res) => {
       page: req.query.page,
       limit: req.query.limit,
     },
-    isAdmin
+    isAdmin,
   );
   res.json({
     success: true,
@@ -149,7 +166,11 @@ const getPostsByUser = asyncHandler(async (req, res) => {
 // @access  Private
 const reactToPost = asyncHandler(async (req, res) => {
   const { emoji } = req.body;
-  const result = await postService.reactToPost(req.params.id, req.user._id, emoji);
+  const result = await postService.reactToPost(
+    req.params.id,
+    req.user._id,
+    emoji,
+  );
   res.json({
     success: true,
     message: `Reaction ${result.action}`,
@@ -161,10 +182,13 @@ const reactToPost = asyncHandler(async (req, res) => {
 // @route   DELETE /api/posts/:id/reactions
 // @access  Private
 const removeReaction = asyncHandler(async (req, res) => {
-  const updatedPost = await postService.removeReaction(req.params.id, req.user._id);
+  const updatedPost = await postService.removeReaction(
+    req.params.id,
+    req.user._id,
+  );
   res.json({
     success: true,
-    message: 'Reaction removed',
+    message: "Reaction removed",
     data: updatedPost,
   });
 });
@@ -173,7 +197,10 @@ const removeReaction = asyncHandler(async (req, res) => {
 // @route   GET /api/posts/:id/reactions
 // @access  Private (owner only)
 const getPostReactions = asyncHandler(async (req, res) => {
-  const result = await postService.getPostReactions(req.params.id, req.user._id);
+  const result = await postService.getPostReactions(
+    req.params.id,
+    req.user._id,
+  );
   res.json({
     success: true,
     data: result,
@@ -200,9 +227,11 @@ const getMyReactedPosts = asyncHandler(async (req, res) => {
 // @route   GET /api/posts/trending/today
 // @access  Public (optional auth)
 const getTrendingToday = asyncHandler(async (req, res) => {
-  const limit = req.query.limit ? Math.min(parseInt(req.query.limit, 10) || 10, 10) : 10;
+  const limit = req.query.limit
+    ? Math.min(parseInt(req.query.limit, 10) || 10, 10)
+    : 10;
   const result = await postService.getTrendingPosts({
-    timeframe: 'today',
+    timeframe: "today",
     page: req.query.page,
     limit,
     sortBy: req.query.sortBy,
@@ -239,7 +268,7 @@ const getRecentOfficial = asyncHandler(async (req, res) => {
 // @access  Public (optional auth)
 const getTrendingWeek = asyncHandler(async (req, res) => {
   const result = await postService.getTrendingPosts({
-    timeframe: 'week',
+    timeframe: "week",
     page: req.query.page,
     limit: req.query.limit,
     currentUserId: req.user?._id,
@@ -257,7 +286,7 @@ const getTrendingWeek = asyncHandler(async (req, res) => {
 // @access  Public (optional auth)
 const getPopular = asyncHandler(async (req, res) => {
   const result = await postService.getTrendingPosts({
-    timeframe: 'popular',
+    timeframe: "popular",
     page: req.query.page,
     limit: req.query.limit,
     currentUserId: req.user?._id,
@@ -274,7 +303,7 @@ const getPopular = asyncHandler(async (req, res) => {
 // @route   GET /api/posts/trending?timeframe=today|week|popular
 // @access  Public (optional auth)
 const getTrending = asyncHandler(async (req, res) => {
-  const timeframe = req.query.timeframe || 'today';
+  const timeframe = req.query.timeframe || "today";
   const result = await postService.getTrendingPosts({
     timeframe,
     page: req.query.page,

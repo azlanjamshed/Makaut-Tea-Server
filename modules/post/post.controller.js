@@ -127,10 +127,16 @@ const deletePost = asyncHandler(async (req, res) => {
 // @route   GET /api/posts/user/:userId?page=1&limit=10
 // @access  Public (optional auth)
 const getPostsByUser = asyncHandler(async (req, res) => {
-  const result = await postService.getPostsByUser(req.params.userId, req.user?._id, {
-    page: req.query.page,
-    limit: req.query.limit,
-  });
+  const isAdmin = req.user?.role === 'admin';
+  const result = await postService.getPostsByUser(
+    req.params.userId,
+    req.user?._id,
+    {
+      page: req.query.page,
+      limit: req.query.limit,
+    },
+    isAdmin
+  );
   res.json({
     success: true,
     data: result.posts,

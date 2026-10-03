@@ -58,6 +58,8 @@ const getAdminPosts = async (
     status = 'all',
     department,
     search,
+    user,
+    userId,
   } = {},
   currentUserId
 ) => {
@@ -85,6 +87,11 @@ const getAdminPosts = async (
 
   if (search && typeof search === 'string' && search.trim()) {
     query.text = new RegExp(escapeRegex(search.trim()), 'i');
+  }
+
+  const targetUser = user || userId;
+  if (targetUser) {
+    query.user = targetUser;
   }
 
   const [posts, total] = await Promise.all([
@@ -281,7 +288,22 @@ const getReports = async ({
       .limit(validLimit)
       .populate('reporter', 'name email anonymousUsername')
       .populate('reviewedBy', 'name email')
-      .populate('post', 'text department isAnonymous isHidden isDeleted')
+      .populate({
+        path: 'post',
+        select: 'text department semester isAnonymous isHidden isDeleted image createdAt user',
+        populate: {
+          path: 'user',
+          select: 'name email anonymousUsername department semester role status',
+        },
+      })
+      .populate({
+        path: 'comment',
+        select: 'text user createdAt',
+        populate: {
+          path: 'user',
+          select: 'name email anonymousUsername department semester role status',
+        },
+      })
       .populate('comment', 'text')
       .populate('reportedUser', 'name email status role'),
     Report.countDocuments(query),
@@ -303,8 +325,22 @@ const getReportById = async (reportId) => {
   const report = await Report.findById(reportId)
     .populate('reporter', 'name email anonymousUsername')
     .populate('reviewedBy', 'name email')
-    .populate('post', 'text department isAnonymous isHidden isDeleted image user')
-    .populate('comment', 'text user')
+    .populate({
+      path: 'post',
+      select: 'text department semester isAnonymous isHidden isDeleted image createdAt user',
+      populate: {
+        path: 'user',
+        select: 'name email anonymousUsername department semester role status',
+      },
+    })
+    .populate({
+      path: 'comment',
+      select: 'text user createdAt',
+      populate: {
+        path: 'user',
+        select: 'name email anonymousUsername department semester role status',
+      },
+    })
     .populate('reportedUser', 'name email status role');
 
   if (!report) {

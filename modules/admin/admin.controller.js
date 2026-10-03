@@ -45,6 +45,8 @@ const getAdminPosts = asyncHandler(async (req, res) => {
       status: req.query.status,
       department: req.query.department,
       search: req.query.search,
+      user: req.query.user || req.query.userId,
+      search: req.query.search,
     },
     req.user?._id
   );

@@ -131,7 +131,7 @@ postSchema.index({ isOfficial: 1, isDeleted: 1, isHidden: 1, createdAt: -1 });
  * Public-safe representation (hides internal viewedBy list; respects anonymous posting; computes reaction counts).
  * Works with both plain JavaScript objects (from .lean()) and Mongoose document instances.
  */
-function formatPublicPost(post, currentUserId) {
+function formatPublicPost(post, currentUserId, isAdminOverride = false) {
   if (!post) return null;
   const rawPost = typeof post.toObject === 'function' ? post.toObject() : post;
 
@@ -150,7 +150,7 @@ function formatPublicPost(post, currentUserId) {
     currentUserId.toString() === rawAuthorId
   );
 
-  if (rawPost.isAnonymous && !isAdmin) {
+  if (rawPost.isAnonymous && !isAdmin && !isAdminOverride) {
     displayUser = {
       _id: null,
       name: (rawPost.user && typeof rawPost.user === 'object' && rawPost.user.anonymousUsername) || 'Anonymous',

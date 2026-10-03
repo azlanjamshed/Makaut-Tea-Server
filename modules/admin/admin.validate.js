@@ -20,10 +20,11 @@ const updateReportStatusSchema = z.object({
 
 const resolveReportSchema = z.object({
   actionTaken: z
-    .enum(['none', 'hidden', 'deleted', 'user_suspended', 'user_banned', 'dismissed'], {
+    .enum(['none', 'hidden', 'deleted', 'user_suspended', 'user_banned', 'dismissed', 'dismiss'], {
       errorMap: () => ({ message: 'Invalid actionTaken' }),
     })
-    .default('dismissed'),
+    .default('dismissed')
+    .transform((val) => (val === 'dismiss' ? 'dismissed' : val)),
   notes: z.string().trim().max(1000).optional().default(''),
 });
 

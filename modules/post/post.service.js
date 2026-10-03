@@ -122,7 +122,7 @@ const getPosts = async ({
   const totalPages = Math.ceil(total / validLimit) || 0;
 
   return {
-    posts: posts.map((p) => Post.formatPublicPost(p, currentUserId)),
+    posts: posts.map((p) => Post.formatPublicPost(p, currentUserId, isAdmin)),
     pagination: {
       page: validPage,
       limit: validLimit,
@@ -226,7 +226,7 @@ const deletePost = async (postId, userId) => {
 /**
  * Get all posts created by a specific user with pagination
  */
-const getPostsByUser = async (userId, currentUserId, { page = 1, limit = 10 } = {}) => {
+const getPostsByUser = async (userId, currentUserId, { page = 1, limit = 10 } = {}, isAdmin = false) => {
   const isSelf = currentUserId && String(userId) === String(currentUserId);
   const validPage = Math.max(parseInt(page, 10) || 1, 1);
   const validLimit = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
@@ -234,13 +234,15 @@ const getPostsByUser = async (userId, currentUserId, { page = 1, limit = 10 } = 
 
   const query = {
     user: userId,
-    isHidden: { $ne: true },
-    isDeleted: { $ne: true },
   };
 
-  // If viewing another user's profile, hide their anonymous rants to protect privacy
-  if (!isSelf) {
-    query.isAnonymous = { $ne: true };
+  // If not admin, hide moderation hidden/deleted posts and respect student anonymity
+  if (!isAdmin) {
+    query.isHidden = { $ne: true };
+    query.isDeleted = { $ne: true };
+    if (!isSelf) {
+      query.isAnonymous = { $ne: true };
+    }
   }
 
   const [posts, total] = await Promise.all([
